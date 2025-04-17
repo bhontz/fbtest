@@ -18,12 +18,18 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  final TextEditingController userNameController = TextEditingController();
   final double coverHeight = 200;
   final double profileHeight = 150;
-  final String defaultUserName = "Click To Add Your UserName";
+  final TextEditingController userNameController = TextEditingController();
+  final TextEditingController aboutController = TextEditingController();
+  String defaultUserName = "Click To Add Your UserName";
+  bool isEditingUserName = false;
+  String defaultAbout = "Click to say some more about you.";
+  bool isEditingAbout = false;
+  AppUser? appUser;
   Uint8List? pickedImage;
-
+  String? pickedWebImage;
+  final String? emailFromAuth = FirebaseAuth.instance.currentUser!.email;
   User? user =
       FirebaseAuth.instance.currentUser; // from AUTH, part of the database key
 
@@ -34,23 +40,9 @@ class _ProfilePageState extends State<ProfilePage> {
     getTextFields();
   }
 
-  Future<AppUser?> getAppUser() async {
-    final ref = FirebaseFirestore.instance
-        .collection('Users')
-        .doc(user?.email)
-        .withConverter(
-          fromFirestore: AppUser.fromFirestore,
-          toFirestore: (AppUser appUser, _) => appUser.toFirestore(),
-        );
-    final docSnap = await ref.get();
-    final appUser = docSnap.data();
-
-    return appUser;
-  }
-
   Future<void> getProfilePicture() async {
     final storageRef = FirebaseStorage.instance.ref();
-    final imageRef = storageRef.child("testprofileimage.jpg");
+    final imageRef = storageRef.child("${emailFromAuth}_profilepic.jpg");
 
     try {
       final imageBytes = await imageRef.getData();
@@ -61,10 +53,37 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  Future<void> getTextFields() async {
-    final test = await getAppUser();
-    debugPrint(test!.userName);
-  }
+  // Future getImage(bool isCamera) async {
+  //   XFile? image;
+
+  //   if (isCamera) {
+  //     image = await ipick.pickImage(
+  //       source: ImageSource.camera,
+  //       maxHeight: 500,
+  //       maxWidth: 500,
+  //     );
+  //   } else {
+  //     image = await ipick.pickImage(
+  //       source: ImageSource.gallery,
+  //       maxHeight: 500,
+  //       maxWidth: 500,
+  //     );
+  //   }
+
+  //   setState(() {
+  //     _image = image;
+  //   });
+  // }
+
+  // Widget displayImage(XFile? pickedFile) {
+  //   if (pickedFile != null) {
+  //     return kIsWeb
+  //         ? Image.network(pickedFile.path)
+  //         : Image.file(File(pickedFile.path));
+  //   } else {
+  //     return Text("No image selection.");
+  //   }
+  // }
 
   Future<void> onProfileImageTapped() async {
     final ImagePicker picker = ImagePicker();
@@ -75,12 +94,139 @@ class _ProfilePageState extends State<ProfilePage> {
     );
     if (image == null) return;
     final storageRef = FirebaseStorage.instance.ref();
-    final imageRef = storageRef.child("testprofileimage.jpg");
+    final imageRef = storageRef.child("${emailFromAuth}_profilepic.jpg");
     final imageBytes = await image.readAsBytes();
     await imageRef.putData(imageBytes);
-    setState(
-      () => pickedImage = imageBytes,
-    ); // you would use the users email address here for this image
+    setState(() => pickedImage = imageBytes); // WHAT IT WAS BEFORE WEB ADD
+    // if (kIsWeb) {
+    //   setState(() => pickedWebImage = image.path);
+    // } else {
+    //   setState(() => pickedImage = imageBytes);
+    // }
+  }
+
+  Future<AppUser?> getAppUser() async {
+    final ref = FirebaseFirestore.instance
+        .collection('Users')
+        .doc(emailFromAuth)
+        .withConverter(
+          fromFirestore: AppUser.fromFirestore,
+          toFirestore: (AppUser appUser, _) => appUser.toFirestore(),
+        );
+    final docSnap = await ref.get();
+    return docSnap.data();
+  }
+
+  Future<void> getTextFields() async {
+    appUser = await getAppUser();
+    setState(() {
+      defaultUserName =
+          appUser != null ? appUser!.userName : "Click To Add Your UserName";
+      defaultAbout =
+          appUser != null
+              ? appUser!.about
+              : "Click to say some more about you.";
+    });
+  }
+
+  void changeAndUpdateUserName(String txt) {
+    setState(() {
+      defaultUserName = txt;
+      isEditingUserName = false;
+      appUser!.userName = defaultUserName;
+    });
+    FirebaseFirestore.instance
+        .collection('Users')
+        .doc(emailFromAuth)
+        .withConverter(
+          fromFirestore: AppUser.fromFirestore,
+          toFirestore: (AppUser appUser, _) => appUser.toFirestore(),
+        )
+        .set(appUser!)
+        .onError((e, _) => debugPrint("error on Users.userName write: $e"));
+  }
+
+  void changeAndUpdateAbout(String txt) {
+    setState(() {
+      defaultAbout = txt;
+      isEditingAbout = false;
+      appUser!.about = defaultAbout;
+    });
+    FirebaseFirestore.instance
+        .collection('Users')
+        .doc(emailFromAuth)
+        .withConverter(
+          fromFirestore: AppUser.fromFirestore,
+          toFirestore: (AppUser appUser, _) => appUser.toFirestore(),
+        )
+        .set(appUser!)
+        .onError((e, _) => debugPrint("error on Users.about write: $e"));
+  }
+
+  Widget editUserNameField() {
+    if (isEditingUserName) {
+      return Center(
+        child: TextField(
+          onSubmitted: (newValue) {
+            changeAndUpdateUserName(newValue);
+          },
+          autofocus: true,
+          controller: userNameController,
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: 28.0,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      );
+    } else {
+      return InkWell(
+        onTap: () {
+          setState(() {
+            isEditingUserName = true;
+          });
+        },
+        child: Center(
+          child: Text(
+            defaultUserName,
+            style: TextStyle(
+              color: Colors.black,
+              fontSize: 28.0,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
+  Widget editAboutField() {
+    if (isEditingAbout) {
+      return Center(
+        child: TextField(
+          onSubmitted: (newValue) {
+            changeAndUpdateAbout(newValue);
+          },
+          autofocus: true,
+          controller: aboutController,
+          style: TextStyle(color: Colors.black, fontSize: 16.0, height: 1.4),
+        ),
+      );
+    } else {
+      return InkWell(
+        onTap: () {
+          setState(() {
+            isEditingAbout = true;
+          });
+        },
+        child: Center(
+          child: Text(
+            defaultAbout,
+            style: TextStyle(color: Colors.black, fontSize: 16.0, height: 1.4),
+          ),
+        ),
+      );
+    }
   }
 
   Widget buildCoverImage() {
@@ -99,10 +245,14 @@ class _ProfilePageState extends State<ProfilePage> {
             left: 15,
             child: GestureDetector(
               onTap: () => Navigator.of(context).pop(),
-              child: Icon(
-                Icons.arrow_back,
-                color: Colors.white,
-                size: coverHeight / 10,
+              child: CircleAvatar(
+                radius: coverHeight / 10,
+                backgroundColor: Colors.white,
+                child: Icon(
+                  Icons.arrow_back,
+                  color: Colors.black,
+                  size: coverHeight / 10,
+                ),
               ),
             ),
           ),
@@ -114,6 +264,34 @@ class _ProfilePageState extends State<ProfilePage> {
   // backgroundImage: NetworkImage(  // this needs to be added to support the web
   //   'https://res.cloudinary.com/dpeqsj31d/image/upload/v1707263739/avatar_2_2.png',
   // ),
+
+  // Widget avatarForTarget() {
+  //   if (kIsWeb) {
+  //     debugPrint("got into avatorForTarget - web path");
+  //     return CircleAvatar(
+  //       radius: profileHeight / 2,
+  //       backgroundColor: Colors.white,
+  //       backgroundImage: NetworkImage(
+  //         'https://res.cloudinary.com/dpeqsj31d/image/upload/v1707263739/avatar_2_2.png',
+  //       ),
+  //       // backgroundImage:
+  //       //     pickedWebImage != null
+  //       //         ? NetworkImage(
+  //       //           'https://res.cloudinary.com/dpeqsj31d/image/upload/v1707263739/avatar_2_2.png',
+  //       //         )
+  //       //         : null,
+  //     );
+  //   } else {
+  //     return CircleAvatar(
+  //       radius: profileHeight / 2,
+  //       backgroundColor: Colors.white,
+  //       backgroundImage:
+  //           pickedImage != null
+  //               ? Image.memory(pickedImage!, fit: BoxFit.cover).image
+  //               : null,
+  //     );
+  //   }
+  // }
 
   Widget buildProfileImage() {
     return GestureDetector(
@@ -150,92 +328,29 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget buildPageContent() {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 48),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 8),
-          GestureDetector(
-            onTap: () {
-              debugPrint("tapping that.");
-            },
-            child: Center(
-              child: Text(
-                'User Name Here',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            'About',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
-            style: TextStyle(fontSize: 16, height: 1.4),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Future getImage(bool isCamera) async {
-  //   XFile? image;
-
-  //   if (isCamera) {
-  //     image = await ipick.pickImage(
-  //       source: ImageSource.camera,
-  //       maxHeight: 500,
-  //       maxWidth: 500,
-  //     );
-  //   } else {
-  //     image = await ipick.pickImage(
-  //       source: ImageSource.gallery,
-  //       maxHeight: 500,
-  //       maxWidth: 500,
-  //     );
-  //   }
-
-  //   setState(() {
-  //     _image = image;
-  //   });
-  // }
-
-  // Widget displayImage(XFile? pickedFile) {
-  //   if (pickedFile != null) {
-  //     return kIsWeb
-  //         ? Image.network(pickedFile.path)
-  //         : Image.file(File(pickedFile.path));
-  //   } else {
-  //     return Text("No image selection.");
-  //   }
-  // }
-
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Column(
         children: <Widget>[
           buildPageTop(),
-          buildPageContent(),
-          // FloatingActionButton(
-          //   child: Text('Camera'),
-          //   onPressed: () {
-          //     getImage(true);
-          //   },
-          // ),
-          // SizedBox(height: 10.0),
-          // FloatingActionButton(
-          //   child: Text('Gallery'),
-          //   onPressed: () {
-          //     getImage(false);
-          //   },
-          // ),
-          // displayImage(_image),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 48),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 8),
+                editUserNameField(),
+                const SizedBox(height: 10),
+                Text(
+                  'About',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                editAboutField(),
+              ],
+            ),
+          ),
         ],
       ),
     );

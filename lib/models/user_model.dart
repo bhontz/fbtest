@@ -1,9 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AppUser {
-  final String about;
-  final String email;
-  final String userName;
+  String about;
+  String email;
+  String userName;
 
   AppUser({required this.about, required this.email, required this.userName});
 

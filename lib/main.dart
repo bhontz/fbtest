@@ -29,7 +29,7 @@ class MyApp extends StatelessWidget {
           BlocProvider(create: (context) => AuthScreensBloc()),
         ],
         child:
-            FoundationPage(), // RegisterPage(), // LoginPage(), // FoundationPage(), // LoginOrRegister(),
+            LoginOrRegister(), // RegisterPage(), // LoginPage(), // FoundationPage(), // LoginOrRegister(),
       ),
     );
   }
