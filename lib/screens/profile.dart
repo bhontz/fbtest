@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import '../services/firebase_service.dart';
 import '../models/user_model.dart';
 // import 'dart:io';
 import 'dart:typed_data';
@@ -36,8 +37,28 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
-    getProfilePicture(); // get a prexisting profile picture from storage
+    if (kIsWeb) {
+      getWebProfilePicture();
+    } else {
+      getProfilePicture(); // get a prexisting profile picture from storage
+    }
     getTextFields();
+  }
+
+  Future<void> getWebProfilePicture() async {
+    final storageRef = FirebaseStorage.instance.ref();
+    final imageRef = storageRef.child("${emailFromAuth}_profilepic.jpg");
+
+    try {
+      final imageBytes = await imageRef.getData();
+      if (imageBytes == null) return;
+      final XFile? image = Image.memory(imageBytes).image as XFile?;
+      setState(
+        () => pickedWebImage = image!.path,
+      ); // WHAT IT WAS BEFORE WEB ADD
+    } catch (e) {
+      debugPrint("Error reading from FirebaseStorage. $e");
+    }
   }
 
   Future<void> getProfilePicture() async {
@@ -97,7 +118,14 @@ class _ProfilePageState extends State<ProfilePage> {
     final imageRef = storageRef.child("${emailFromAuth}_profilepic.jpg");
     final imageBytes = await image.readAsBytes();
     await imageRef.putData(imageBytes);
-    setState(() => pickedImage = imageBytes); // WHAT IT WAS BEFORE WEB ADD
+    if (kIsWeb) {
+      debugPrint(
+        "WEB - picked an image, here is the image.path: $image.path.toString",
+      );
+      setState(() => pickedWebImage = image.path);
+    } else {
+      setState(() => pickedImage = imageBytes); // WHAT IT WAS BEFORE WEB ADD
+    }
     // if (kIsWeb) {
     //   setState(() => pickedWebImage = image.path);
     // } else {
@@ -293,10 +321,26 @@ class _ProfilePageState extends State<ProfilePage> {
   //   }
   // }
 
-  Widget buildProfileImage() {
-    return GestureDetector(
-      onTap: onProfileImageTapped,
-      child: CircleAvatar(
+  Widget showImageWebOrNot() {
+    if (kIsWeb) {
+      debugPrint("about to render: $pickedWebImage");
+      return CircleAvatar(
+        radius: profileHeight / 2 + 5,
+        backgroundColor: Colors.white,
+        child: CircleAvatar(
+          radius: profileHeight / 2,
+          backgroundColor: Colors.white,
+          backgroundImage:
+              pickedWebImage != null
+                  ? Image(
+                    image: NetworkImage(pickedWebImage!),
+                    fit: BoxFit.cover,
+                  ).image
+                  : null,
+        ),
+      );
+    } else {
+      return CircleAvatar(
         radius: profileHeight / 2 + 5,
         backgroundColor: Colors.white,
         child: CircleAvatar(
@@ -307,6 +351,17 @@ class _ProfilePageState extends State<ProfilePage> {
                   ? Image.memory(pickedImage!, fit: BoxFit.cover).image
                   : null,
         ),
+      );
+    }
+  }
+
+  Widget buildProfileImage() {
+    return GestureDetector(
+      onTap: onProfileImageTapped,
+      child: CircleAvatar(
+        radius: profileHeight / 2 + 5,
+        backgroundColor: Colors.white,
+        child: showImageWebOrNot(),
       ),
     );
   }

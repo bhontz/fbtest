@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import '../models/comment_model.dart';
 import '../models/user_model.dart';
 import 'dart:developer'
@@ -64,5 +65,18 @@ class FirestoreDatabase {
     final commentStream = commentsCollection.snapshots();
 
     return commentStream;
+  }
+}
+
+class FirestoreStorage {
+  Future<String?> getURL(String path) async {
+    try {
+      String imageURL =
+          await FirebaseStorage.instance.ref().child(path).getDownloadURL();
+      return imageURL;
+    } catch (e) {
+      log_dev.log("Error reading from FirebaseStorage. $e");
+      return null;
+    }
   }
 }
