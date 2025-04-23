@@ -5,7 +5,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'bloc/appbarmenu/appbarmenu_bloc.dart';
 import 'bloc/authscreens/auth_bloc.dart';
 import 'screens/login_or_register.dart';
-import 'screens/foundation.dart';
 import 'screens/theme.dart';
 
 Future<void> main() async {

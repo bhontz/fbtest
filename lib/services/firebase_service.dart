@@ -6,7 +6,10 @@ import '../models/user_model.dart';
 import 'dart:developer'
     as log_dev; // provide a print() debug function to the debug console
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
 import 'dart:math';
+import 'dart:typed_data';
+import 'dart:io';
 
 AppUser? thisUser;
 
@@ -69,14 +72,40 @@ class FirestoreDatabase {
 }
 
 class FirestoreStorage {
-  Future<String?> getURL(String path) async {
+  final String path;
+  FirestoreStorage({required this.path});
+
+  Future<String?> getUrl() async {
+    final newMetadata = SettableMetadata(
+      contentType: 'image/jpeg',
+      cacheControl: 'public,max-age=300',
+      // customMetadata: {'picked-file-path': file.path},
+    );
+
     try {
-      String imageURL =
-          await FirebaseStorage.instance.ref().child(path).getDownloadURL();
-      return imageURL;
+      final storageRef = FirebaseStorage.instance.ref();
+      final imageRef = storageRef.child(
+        "brad.hontz@pinpointview.com_profilepic.jpg",
+      );
+      final imageBytes = imageRef.getData();
+      imageRef.updateMetadata(newMetadata);
+      final url = imageRef.getDownloadURL();
+      log_dev.log("in getUrl got the url: $url");
+      return url;
     } catch (e) {
-      log_dev.log("Error reading from FirebaseStorage. $e");
+      log_dev.log("Error reading from FirebaseStore class method getURL: $e");
       return null;
     }
   }
+
+  // Future<String?> getURL(String path) async {
+  //   try {
+  //     String imageURL =
+  //         await FirebaseStorage.instance.ref().child(path).getDownloadURL();
+  //     return imageURL;
+  //   } catch (e) {
+  //     log_dev.log("Error reading from FirebaseStorage. $e");
+  //     return null;
+  //   }
+  // }
 }

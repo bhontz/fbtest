@@ -6,8 +6,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../services/firebase_service.dart';
 import '../models/user_model.dart';
-// import 'dart:io';
 import 'dart:typed_data';
+
+/*
+https://firebasestorage.googleapis.com/v0/b/teacher-project-3f7c9.firebasestorage.app/o/brad.hontz%40pinpointview.com_profilepic.jpg?alt=media&token=44e460e6-bbc8-4eac-af3e-248c41e90c8d
+*/
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -48,14 +51,18 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> getWebProfilePicture() async {
     final storageRef = FirebaseStorage.instance.ref();
     final imageRef = storageRef.child("${emailFromAuth}_profilepic.jpg");
+    // final whatIsThis = FirestoreStorage(
+    //   path: "${emailFromAuth}_profilepic.jpg",
+    // );
+    // final url = await whatIsThis.getUrl();
+    // setState(() => pickedWebImage = url);
+    // debugPrint("FirebaseStorage class getUrl method: $url");
 
     try {
       final imageBytes = await imageRef.getData();
       if (imageBytes == null) return;
       final XFile? image = Image.memory(imageBytes).image as XFile?;
-      setState(
-        () => pickedWebImage = image!.path,
-      ); // WHAT IT WAS BEFORE WEB ADD
+      setState(() => pickedWebImage = image!.path);
     } catch (e) {
       debugPrint("Error reading from FirebaseStorage. $e");
     }
@@ -119,18 +126,10 @@ class _ProfilePageState extends State<ProfilePage> {
     final imageBytes = await image.readAsBytes();
     await imageRef.putData(imageBytes);
     if (kIsWeb) {
-      debugPrint(
-        "WEB - picked an image, here is the image.path: $image.path.toString",
-      );
       setState(() => pickedWebImage = image.path);
     } else {
       setState(() => pickedImage = imageBytes); // WHAT IT WAS BEFORE WEB ADD
     }
-    // if (kIsWeb) {
-    //   setState(() => pickedWebImage = image.path);
-    // } else {
-    //   setState(() => pickedImage = imageBytes);
-    // }
   }
 
   Future<AppUser?> getAppUser() async {
@@ -321,9 +320,24 @@ class _ProfilePageState extends State<ProfilePage> {
   //   }
   // }
 
+  // Widget getNetworkImage() {
+  //   try {
+  //     return CircleAvatar(
+  //       radius: profileHeight / 2,
+  //       backgroundColor: Colors.white,
+  //       backgroundImage:
+  //           pickedWebImage != null
+  //               ? Image.network(pickedWebImage!, fit: BoxFit.cover).image
+  //               : null,
+  //     );
+  //   } catch (e) {
+  //     debugPrint("Error getting the network image: $e");
+  //     return CircularProgressIndicator();
+  //   }
+  // }
+
   Widget showImageWebOrNot() {
     if (kIsWeb) {
-      debugPrint("about to render: $pickedWebImage");
       return CircleAvatar(
         radius: profileHeight / 2 + 5,
         backgroundColor: Colors.white,
@@ -332,10 +346,7 @@ class _ProfilePageState extends State<ProfilePage> {
           backgroundColor: Colors.white,
           backgroundImage:
               pickedWebImage != null
-                  ? Image(
-                    image: NetworkImage(pickedWebImage!),
-                    fit: BoxFit.cover,
-                  ).image
+                  ? Image.network(pickedWebImage!, fit: BoxFit.cover).image
                   : null,
         ),
       );
